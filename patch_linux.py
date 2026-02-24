@@ -71,6 +71,14 @@ def main() -> int:
         label="pcrio.c MSVC secure CRT compat",
     )
 
+    # --- Patch 2: genieutils CMakeLists.txt — missing source files ---
+    ok &= patch_file(
+        filepath=source / "genieutils" / "CMakeLists.txt",
+        anchor="src/dat/unit/Building.cpp",
+        insertion="    src/dat/unit/TrainLocation.cpp\n    src/dat/ResearchLocation.cpp",
+        label="genieutils CMakeLists.txt missing sources",
+    )
+
     # Summary
     print()
     if ok:
