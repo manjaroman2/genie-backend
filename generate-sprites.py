@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
-import subprocess
+import importlib
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 from tqdm import tqdm
@@ -109,19 +109,30 @@ def fmt_size(b: int) -> str:
         return f"{b / 1024 ** 3:.2f}GB"
 
 
-def convert_file(bin_dir: Path, palettes_path: Path, sld_file: Path, out_dir: Path) -> int:
+def load_singlefile(openage_dir: Path):
+    """Add openage's bin dir to sys.path and load singlefile.py from it."""
+    bin_dir = openage_dir / "bin"
+    if str(bin_dir) not in sys.path:
+        sys.path.insert(0, str(bin_dir))
+    return importlib.import_module("openage.convert.tool.singlefile")
+
+
+_openage_dir: Path | None = None
+
+
+def _init_worker(openage_dir: Path):
+    global _openage_dir
+    _openage_dir = openage_dir
+
+
+def convert_file(sld_file: Path, out_dir: Path) -> int:
     """Returns output file size in bytes on success, 0 on failure."""
+    openage_script = load_singlefile(_openage_dir)
     out_file = out_dir / f"{sld_file.stem}.png"
-    cmd = [
-        "./run", "convert-file",
-        "--palettes-path", str(palettes_path),
-        str(sld_file),
-        str(out_file),
-    ]
     try:
-        subprocess.run(cmd, cwd=bin_dir, check=True, capture_output=True)
+        openage_script.read_sld_file(sld_file, out_file, compression_level=2, layer=0)
         return out_file.stat().st_size
-    except (subprocess.CalledProcessError, OSError):
+    except Exception:
         return 0
 
 
@@ -135,12 +146,11 @@ def main():
                         help="Interactively select which sprites to convert")
     args = parser.parse_args()
 
-    run_bin = args.openage_dir / "bin" / "run"
-    if not run_bin.exists():
-        print(f"Error: {run_bin} does not exist", file=sys.stderr)
+    bin_dir = args.openage_dir / "bin"
+    if not bin_dir.is_dir():
+        print(f"Error: {bin_dir} does not exist", file=sys.stderr)
         sys.exit(1)
 
-    palettes_path = args.game_dir / "Tools_Builds" / "Sprites" / "_palettes"
     graphics_dir = args.game_dir / "resources" / "_common" / "drs" / "graphics"
 
     if not graphics_dir.exists():
@@ -164,7 +174,6 @@ def main():
         print(f"\nSelected {len(sld_files)} file(s).")
 
     out_dir = args.out_dir.resolve()
-    bin_dir = args.openage_dir / "bin"
     completed = 0
     failed = 0
     bytes_written = 0
@@ -175,9 +184,13 @@ def main():
     print(f"Workers: {args.workers}")
 
     with tqdm(total=len(sld_files), unit="file", dynamic_ncols=True) as progress:
-        with ThreadPoolExecutor(max_workers=args.workers) as executor:
+        with ProcessPoolExecutor(
+            max_workers=args.workers,
+            initializer=_init_worker,
+            initargs=(args.openage_dir,),
+        ) as executor:
             futures = {
-                executor.submit(convert_file, bin_dir, palettes_path, sld_file, out_dir): sld_file
+                executor.submit(convert_file, sld_file, out_dir): sld_file
                 for sld_file in sld_files
             }
             for future in as_completed(futures):
