@@ -1,12 +1,13 @@
+#include <algorithm>
 #include <iostream>
 #include <string>
-#include <algorithm>
 
 #include "genie/dat/DatFile.h"
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2) {
+    if (argc < 2)
+    {
         std::cerr << "Usage: " << argv[0] << " <path-to-AoE2DE-game-dir>" << std::endl;
         return 1;
     }
@@ -19,9 +20,12 @@ int main(int argc, char *argv[])
     genie::DatFile df;
     df.setGameVersion(genie::GV_LatestDE2);
 
-    try {
+    try
+    {
         df.load(datPath.c_str());
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         std::cerr << "Failed to load dat file: " << e.what() << std::endl;
         return 1;
     }
@@ -29,9 +33,18 @@ int main(int argc, char *argv[])
     std::cout << "File version: " << df.FileVersion << std::endl;
     std::cout << std::endl;
 
+    // Grahpics
+    std::cout << "=== Graphics (" << df.Graphics.size() << ") ===" << std::endl;
+    for (size_t i = 0; i < df.Graphics.size(); i++)
+    {
+        std::cout << "  [" << i << "] " << df.Graphics[i].FileName << std::endl;
+    }
+    std::cout << std::endl;
+
     // Civilizations
     std::cout << "=== Civilizations (" << df.Civs.size() << ") ===" << std::endl;
-    for (size_t i = 0; i < df.Civs.size(); i++) {
+    for (size_t i = 0; i < df.Civs.size(); i++)
+    {
         std::cout << "  [" << i << "] " << df.Civs[i].Name << std::endl;
     }
     std::cout << std::endl;
@@ -39,8 +52,10 @@ int main(int argc, char *argv[])
     // Technologies
     std::cout << "=== Technologies (" << df.Techs.size() << ") ===" << std::endl;
     size_t techLimit = std::min<size_t>(df.Techs.size(), 10);
-    for (size_t i = 0; i < techLimit; i++) {
-        if (!df.Techs[i].Name.empty()) {
+    for (size_t i = 0; i < techLimit; i++)
+    {
+        if (!df.Techs[i].Name.empty())
+        {
             std::cout << "  [" << i << "] " << df.Techs[i].Name << std::endl;
         }
     }
@@ -49,15 +64,17 @@ int main(int argc, char *argv[])
     std::cout << std::endl;
 
     // Units from Gaia (civ 0)
-    if (!df.Civs.empty()) {
+    if (!df.Civs.empty())
+    {
         const auto &gaia = df.Civs[0];
         std::cout << "=== Units in " << gaia.Name << " (" << gaia.Units.size() << ") ===" << std::endl;
         size_t printed = 0;
-        for (size_t i = 0; i < gaia.Units.size() && printed < 10; i++) {
+        for (size_t i = 0; i < gaia.Units.size() && printed < 10; i++)
+        {
             const auto &unit = gaia.Units[i];
-            if (!unit.Name.empty()) {
-                std::cout << "  [" << unit.ID << "] " << unit.Name
-                          << " (HP: " << unit.HitPoints << ")" << std::endl;
+            if (!unit.Name.empty())
+            {
+                std::cout << "  [" << unit.ID << "] " << unit.Name << " (HP: " << unit.HitPoints << ")" << std::endl;
                 printed++;
             }
         }
