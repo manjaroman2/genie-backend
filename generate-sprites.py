@@ -142,8 +142,6 @@ def main():
     parser.add_argument("game_dir", type=Path, help="Path to the game directory")
     parser.add_argument("out_dir", type=Path, help="Output directory for .png files")
     parser.add_argument("--workers", type=int, default=16, help="Number of parallel workers (default: 16)")
-    parser.add_argument("--interactive", "-i", action="store_true",
-                        help="Interactively select which sprites to convert")
     args = parser.parse_args()
 
     bin_dir = args.openage_dir / "bin"
@@ -164,14 +162,13 @@ def main():
         print(f"No .sld files found in {graphics_dir}", file=sys.stderr)
         sys.exit(1)
 
-    if args.interactive:
-        tree = build_tree(sld_files)
-        print("Select sprites to convert (Enter=skip a category, 0=select all):")
-        sld_files = select_sprites(tree)
-        if not sld_files:
-            print("No sprites selected. Exiting.")
-            sys.exit(0)
-        print(f"\nSelected {len(sld_files)} file(s).")
+    tree = build_tree(sld_files)
+    print("Select sprites to convert (Enter=skip a category, 0=select all):")
+    sld_files = select_sprites(tree)
+    if not sld_files:
+        print("No sprites selected. Exiting.")
+        sys.exit(0)
+    print(f"\nSelected {len(sld_files)} file(s).")
 
     out_dir = args.out_dir.resolve()
     completed = 0
